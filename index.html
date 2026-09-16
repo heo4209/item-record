@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f7f8fc">
+<title>물품 기록</title>
+<!-- PWA Settings -->
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="물품 기록">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<!-- 이미지 저장 라이브러리 추가 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f6fa;color:#20232a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}
+.app{max-width:600px;margin:auto;min-height:100vh;padding:18px 15px 40px}
+header{display:flex;justify-content:space-between;align-items:center;margin:5px 2px 14px}
+h1{font-size:25px;margin:0;font-weight:800}
+.header-right{display:flex;align-items:center;gap:10px}
+.history-btn{border:0;background:#22252d;color:#fff;border-radius:10px;padding:6px 11px;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s}
+.history-btn:active{background:#444}
+.today{font-size:13px;color:#7b8190}
+
+.main-tabs{display:flex;gap:6px;margin-bottom:14px;background:#e2e5ed;padding:4px;border-radius:14px}
+.tab-btn{flex:1;border:0;background:none;padding:10px;font-size:15px;font-weight:750;color:#666d7d;border-radius:10px;cursor:pointer;transition:all .2s}
+.tab-btn.active{background:#fff;color:#22252d;box-shadow:0 2px 8px #00000012}
+
+.days{display:flex;gap:8px;overflow-x:auto;padding:2px 1px 12px;scrollbar-width:none}
+.days::-webkit-scrollbar{display:none}
+.day{min-width:55px;border:0;border-radius:16px;background:#fff;padding:9px 7px;text-align:center;box-shadow:0 2px 10px #0000000a;cursor:pointer}
+.day .dow{font-size:11px;color:#9298a5}.day .num{font-size:17px;font-weight:750;margin-top:3px}
+.day.active{background:#22252d;color:#fff}.day.active .dow{color:#d6d8de}
+.section{margin-top:13px}.section-title{display:flex;align-items:center;justify-content:space-between;margin:13px 3px 8px}
+.section-title h2{font-size:16px;margin:0}.count{font-size:12px;color:#8a909c}
+.card{background:#fff;border-radius:18px;padding:13px 14px;margin:8px 0;box-shadow:0 3px 14px #0000000a;display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .1s}
+.card:active{transform:scale(.99)}
+.star-btn{border:0;background:none;font-size:20px;color:#d5d8df;cursor:pointer;padding:2px 4px;line-height:1;margin-right:2px}
+.star-btn.active{color:#f3ad19}
+.card-body{min-width:0}
+.name{font-weight:750;font-size:15px}
+.memo{flex:1;font-size:14px;font-weight:600;color:#555;text-align:left;padding:0 0 0 8px;word-break:break-all}
+.meta{font-size:12px;color:#555c6a;margin-top:4px;font-weight:700}
+.right-group{display:flex;align-items:center;gap:8px;margin-left:auto;white-space:nowrap}
+.amount{text-align:right;font-weight:750;font-size:16px}
+.del-btn{border:0;background:#f0f2f5;color:#999;border-radius:50%;width:26px;height:26px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,color .2s;flex-shrink:0}
+.del-btn:hover{background:#ffebeb;color:#ff4d4f}
+.empty{background:#fff;border-radius:18px;padding:25px;text-align:center;color:#a0a5af;font-size:14px;cursor:pointer;transition:transform .1s}
+.empty:active{transform:scale(.99)}
+.list-add-btn{width:100%;background:#eef0f5;border:0;border-radius:14px;padding:9px;font-size:20px;font-weight:700;color:#555;cursor:pointer;margin-top:6px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.list-add-btn:active{background:#e0e3eb}
+.modal{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end;justify-content:center;z-index:10}.modal.show{display:flex}
+.sheet{background:#fff;width:100%;max-width:600px;border-radius:25px 25px 0 0;padding:20px 18px 80px;max-height:90vh;overflow:auto}
+.handle{width:38px;height:4px;background:#d9dce2;border-radius:5px;margin:0 auto 17px}
+.sheet-head{display:flex;justify-content:space-between;align-items:center}.sheet h2{font-size:20px;margin:0 0 17px}.close{border:0;background:#f1f2f5;border-radius:50%;width:32px;height:32px;font-size:20px;cursor:pointer}
+label{display:block;font-size:13px;font-weight:650;margin:12px 2px 6px}
+.date-chips{display:flex;gap:6px;overflow-x:auto;padding:4px 1px 10px;scrollbar-width:none}
+.date-chips::-webkit-scrollbar{display:none}
+.chip{border:1px solid #e0e2e8;background:#fafbfc;border-radius:12px;padding:9px 12px;font-size:13px;white-space:nowrap;cursor:pointer;flex-shrink:0;color:#444}
+.chip.active{background:#22252d;color:#fff;border-color:#22252d;font-weight:700}
+input{width:100%;border:1px solid #e0e2e8;border-radius:12px;padding:13px;font-size:16px;outline:0;background:#fafbfc}
+input:focus{border-color:#777}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+input[type=number]{-moz-appearance:textfield}
+.unit-price-box{display:flex;align-items:center;background:#fafbfc;border:1px solid #e0e2e8;border-radius:12px;padding:0 13px;transition:border-color .2s}
+.unit-price-box:focus-within{border-color:#777}
+.unit-price-box .prefix{font-size:15px;font-weight:700;color:#555;margin-right:8px;white-space:nowrap}
+.unit-price-box input{border:0;background:transparent;padding:13px 0}
+.unit-price-box input:focus{border:0;outline:0}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.starcheck{display:flex;align-items:center;gap:8px;margin:14px 1px;font-size:13px;cursor:pointer}.starcheck input{width:18px;height:18px}
+.save{width:100%;border:0;border-radius:14px;background:#22252d;color:#fff;padding:15px;font-size:16px;font-weight:750;margin-top:8px;cursor:pointer}
+.history-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px;color:#222}
+.history-table th{border-bottom:2px solid #e0e2e8;padding:10px 6px;text-align:left;font-weight:700;color:#555}
+.history-table td{border-bottom:1px solid #f0f2f5;padding:12px 6px;font-weight:500;vertical-align:middle}
+.history-table .col-date{width:28%;color:#666}
+.history-table .col-name{width:42%;word-break:break-all}
+.history-table .col-amount{width:30%;text-align:right;font-weight:600}
+
+/* 사진 저장 버튼 스타일 추가 */
+.save-img-btn{border:0;background:#22252d;color:#fff;border-radius:10px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s}
+.save-img-btn:active{background:#444}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>물품 기록</h1>
+  <div class="header-right">
+    <button type="button" class="history-btn" onclick="openHistoryModal()">전체내역</button>
+    <div class="today" id="today"></div>
+  </div>
+</header>
+
+<div class="main-tabs">
+  <button type="button" class="tab-btn active" id="tabBtn1" onclick="switchTab(1)">사량해</button>
+  <button type="button" class="tab-btn" id="tabBtn2" onclick="switchTab(2)">단가 목록</button>
+</div>
+
+<div class="days" id="days"></div>
+
+<div class="section">
+  <!-- 00일 물품 캡처 영역 지정 -->
+  <div id="captureArea" style="padding:2px; background:#f5f6fa; border-radius:18px;">
+    <div class="section-title">
+      <div style="display:flex;align-items:center;gap:6px">
+        <h2 id="dateTitle">오늘 물품</h2>
+        <span class="count" id="dateCount"></span>
+      </div>
+      <!-- 사진 저장 버튼 위치 추가 -->
+      <button type="button" class="save-img-btn" onclick="saveListImage()">사진 저장</button>
+    </div>
+    <div id="dateList"></div>
+  </div>
+</div>
+
+<div class="section" id="alwaysSection">
+  <div class="section-title"><h2>즐겨찾기 ★</h2><span class="count" id="alwaysCount"></span></div>
+  <div id="alwaysList"></div>
+</div>
+</div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+ <div class="sheet">
+  <div class="handle"></div>
+  <div class="sheet-head"><h2 id="modalTitle">물품 추가</h2><button type="button" class="close" onclick="closeModal()">×</button></div>
+  
+  <div id="dateSection">
+    <label>날짜 선택</label>
+    <div class="date-chips" id="dateChips"></div>
+  </div>
+  <input id="dayInput" type="hidden">
+  
+  <label>이름</label>
+  <input id="nameInput" type="text" placeholder="물품 이름">
+  <div class="row">
+   <div><label>수량</label><input id="qtyInput" type="number" min="0" step="any" placeholder="비워두면 1"></div>
+   <div><label>총 금액</label><input id="amountInput" type="number" min="0" step="any" placeholder="총 금액"></div>
+  </div>
+  <label>1개당 금액 (입력 시 단가 목록에도 동시 저장)</label>
+  <div class="unit-price-box">
+    <span class="prefix">1개당</span>
+    <input id="unitPriceInput" type="number" min="0" step="any" placeholder="금액 입력" enterkeyhint="done">
+  </div>
+  
+  <label class="starcheck"><input id="starInput" type="checkbox" onchange="toggleDateSection()"> ★ 즐겨찾기로 저장</label>
+  <button type="button" class="save" id="saveBtn" onclick="saveItem()">저장</button>
+ </div>
+</div>
+
+<div class="modal" id="historyModal" onclick="if(event.target===this)closeHistoryModal()">
+ <div class="sheet">
+  <div class="handle"></div>
+  <div class="sheet-head"><h2>전체 내역</h2><button type="button" class="close" onclick="closeHistoryModal()">×</button></div>
+  <div id="historyContent"></div>
+ </div>
+</div>
+
+<script>
+const KEY='item-record-v1';
+let items=JSON.parse(localStorage.getItem(KEY)||'[]');
+let selectedDay=new Date().getDate();
+let currentTab=1;
+let editingId=null;
+
+const save=()=>localStorage.setItem(KEY,JSON.stringify(items));
+const DOW=['일','월','화','수','목','금','토'];
+
+function getValidDates(){
+  const now=new Date(), list=[];
+  for(let i=-1; i<=15; i++) list.push(new Date(now.getFullYear(), now.getMonth(), now.getDate()+i));
+  return list;
+}
+
+function cleanupOldData(){
+ const yesterdayZero=new Date();
+ yesterdayZero.setDate(yesterdayZero.getDate() - 1);
+ yesterdayZero.setHours(0,0,0,0);
+ const validDays=getValidDates().map(d=>d.getDate());
+
+ items=items.filter(x=>{
+   if(x.tab === 2 || x.star) return true;
+   if(x.year && x.month) return new Date(x.year, x.month-1, x.day) >= yesterdayZero;
+   return validDays.includes(x.day);
+ });
+ save();
+}
+
+function initHeader(){
+ const d=new Date();
+ document.getElementById('today').textContent=`${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function switchTab(tabNum){
+ currentTab = tabNum;
+ document.getElementById('tabBtn1').classList.toggle('active', tabNum === 1);
+ document.getElementById('tabBtn2').classList.toggle('active', tabNum === 2);
+ 
+ document.getElementById('days').style.display = tabNum === 1 ? 'flex' : 'none';
+ document.getElementById('alwaysSection').style.display = tabNum === 1 ? 'block' : 'none';
+ 
+ renderLists();
+}
+
+function renderDays(){
+ const el=document.getElementById('days'); el.innerHTML='';
+ getValidDates().forEach(d=>{
+   const day=d.getDate();
+   const b=document.createElement('button');
+   b.type='button';
+   b.className='day'+(day===selectedDay?' active':'');
+   b.innerHTML=`<div class="dow">${DOW[d.getDay()]}</div><div class="num">${day}</div>`;
+   b.onclick=()=>{selectedDay=day;renderDays();renderLists();};
+   el.appendChild(b);
+ });
+}
+
+function renderModalDateChips(targetDay){
+ const container = document.getElementById('dateChips');
+ container.innerHTML = '';
+ const validDates = getValidDates();
+ const now = new Date();
+ 
+ validDates.forEach(d => {
+   const day = d.getDate();
+   const isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+   const chip = document.createElement('button');
+   chip.type = 'button';
+   chip.className = 'chip' + (day === targetDay ? ' active' : '');
+   chip.textContent = isToday ? `오늘 (${day}일)` : `${day}일(${DOW[d.getDay()]})`;
+   chip.onclick = () => {
+     container.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+     chip.classList.add('active');
+     document.getElementById('dayInput').value = day;
+   };
+   container.appendChild(chip);
+ });
+ document.getElementById('dayInput').value = targetDay || '';
+}
+
+function toggleDateSection(){
+ document.getElementById('dateSection').style.display = document.getElementById('starInput').checked ? 'none' : 'block';
+}
+
+function openModal(item = null, isAlways = false){
+ editingId = item ? item.id : null;
+ document.getElementById('modalTitle').textContent = item ? '물품 수정' : '물품 추가';
+ document.getElementById('saveBtn').textContent = item ? '수정 완료' : '저장';
+ document.getElementById('modal').classList.add('show');
+ 
+ renderModalDateChips(item?.day ?? selectedDay);
+
+ if(item){
+   document.getElementById('nameInput').value = item.name;
+   document.getElementById('unitPriceInput').value = item.unitPrice ?? item.memo ?? '';
+   document.getElementById('qtyInput').value = item.qty;
+   document.getElementById('amountInput').value = item.amount;
+   document.getElementById('starInput').checked = !!item.star;
+ } else {
+   ['nameInput','unitPriceInput','qtyInput','amountInput'].forEach(id=>document.getElementById(id).value='');
+   document.getElementById('starInput').checked = !!isAlways;
+ }
+ toggleDateSection();
+ document.getElementById('nameInput').focus();
+}
+
+function closeModal(){
+ if(document.activeElement) document.activeElement.blur();
+ document.getElementById('modal').classList.remove('show');
+}
+
+function openHistoryModal(){
+  document.getElementById('historyModal').classList.add('show');
+  renderHistoryTable();
+}
+
+function closeHistoryModal(){
+  document.getElementById('historyModal').classList.remove('show');
+}
+
+function renderHistoryTable(){
+  const container = document.getElementById('historyContent');
+  const historyItems = items.filter(x => (x.tab || 1) === 1);
+  if(!historyItems.length){
+    container.innerHTML = '<div class="empty" style="cursor:default">저장된 물품 내역이 없습니다.</div>';
+    return;
+  }
+
+  const sorted = [...historyItems].sort((a,b) => b.id - a.id);
+  let html = `<table class="history-table"><thead><tr><th class="col-date">날짜</th><th class="col-name">이름</th><th class="col-amount">금액</th></tr></thead><tbody>`;
+
+  sorted.forEach(it => {
+    const dateStr = (!it.star && it.day) ? (it.month ? `${it.month}.${it.day}` : `${it.day}일`) : '즐겨찾기';
+    html += `<tr><td class="col-date">${dateStr}</td><td class="col-name">${escapeHtml(it.name)}</td><td class="col-amount">${new Intl.NumberFormat('ko-KR').format(it.amount)}원</td></tr>`;
+  });
+
+  container.innerHTML = html + `</tbody></table>`;
+}
+
+function editItem(id){
+ const item = items.find(x => x.id === id);
+ if(item) openModal(item);
+}
+
+function deleteItem(e, id){
+ e.stopPropagation();
+ if(confirm('이 물품을 삭제하시겠습니까?')){
+   items = items.filter(x => x.id !== id);
+   save();
+   renderLists();
+ }
+}
+
+function saveItem(){
+ if(document.activeElement) document.activeElement.blur();
+ const validDateObjs=getValidDates();
+ const isStar=document.getElementById('starInput').checked;
+ const day=parseInt(document.getElementById('dayInput').value, 10);
+ const name=document.getElementById('nameInput').value.trim();
+ const unitPriceRaw=document.getElementById('unitPriceInput').value.trim();
+ const qtyRaw=document.getElementById('qtyInput').value.trim();
+ const amountRaw=document.getElementById('amountInput').value.trim();
+ const qty=qtyRaw===''?1:Number(qtyRaw), amount=Number(amountRaw);
+ const unitPrice=unitPriceRaw!==''?Number(unitPriceRaw):null;
+
+ if(!name){alert('이름을 입력해주세요.');return}
+ if(amountRaw==='' || amount<0){alert('금액을 입력해주세요.');return}
+ if(qty<=0){alert('수량은 0보다 크게 입력해주세요.');return}
+ if(!isStar && (!day || !validDateObjs.some(d=>d.getDate()===day))){alert('날짜를 선택해주세요.');return}
+
+ const matchedDate=validDateObjs.find(d=>d.getDate()===day) || validDateObjs[0];
+ const itemData = {
+   year: isStar ? null : matchedDate.getFullYear(),
+   month: isStar ? null : matchedDate.getMonth()+1,
+   day: isStar ? null : day,
+   name, unitPrice, qty, amount, star: isStar
+ };
+
+ if(editingId !== null){
+   const idx = items.findIndex(x => x.id === editingId);
+   if(idx !== -1) items[idx] = { ...items[idx], ...itemData };
+ } else {
+   const baseId = Date.now();
+   items.push({ id: baseId, tab: 1, ...itemData });
+   if(unitPrice !== null){
+     items.push({ id: baseId + 1, tab: 2, ...itemData, star: false });
+   }
+ }
+
+ save(); 
+ if(!isStar && day) selectedDay=day; 
+ closeModal();
+ renderDays(); renderLists();
+}
+
+function initKeyEvents(){
+ ['nameInput', 'qtyInput', 'amountInput', 'unitPriceInput'].forEach(id => {
+   const el = document.getElementById(id);
+   if(el){
+     el.addEventListener('keydown', e => {
+       if(e.key === 'Enter'){
+         e.preventDefault();
+         e.stopPropagation();
+         el.blur();
+         saveItem();
+       }
+     });
+     el.addEventListener('focus', () => {
+       setTimeout(() => {
+         el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+       }, 300);
+     });
+   }
+ });
+}
+
+function toggleStar(e, id){
+ e.stopPropagation();
+ const item=items.find(x=>x.id===id);
+ if(!item) return;
+
+ if(item.star){
+   items = items.filter(x => x.id !== id);
+ } else {
+   items.push({ ...item, id: Date.now(), star: true, year: null, month: null, day: null });
+ }
+ save(); renderLists();
+}
+
+function card(it){
+ let unitPriceText = '';
+ const up = it.unitPrice ?? (it.memo && !isNaN(it.memo) ? Number(it.memo) : null);
+ if(up !== null && up !== '' && !isNaN(up)){
+   unitPriceText = `1개당 ${new Intl.NumberFormat('ko-KR').format(up)}원`;
+ }
+
+ return `<div class="card" onclick="editItem(${it.id})">
+  <button type="button" class="star-btn ${it.star?'active':''}" onclick="toggleStar(event, ${it.id})">★</button>
+  <div class="card-body">
+    <div class="name">${escapeHtml(it.name)}</div>
+    <div class="meta">${formatQty(it.qty)}개</div>
+  </div>
+  <div class="memo">${unitPriceText}</div>
+  <div class="right-group">
+    <div class="amount">${new Intl.NumberFormat('ko-KR').format(it.amount)}원</div>
+    <button type="button" class="del-btn" onclick="deleteItem(event, ${it.id})" aria-label="삭제">×</button>
+  </div>
+ </div>`;
+}
+
+function formatQty(q){return Number.isInteger(q)?q:new Intl.NumberFormat('ko-KR',{maximumFractionDigits:2}).format(q)}
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+
+function renderLists(){
+ if(currentTab === 1){
+   const tab1Items = items.filter(x => (x.tab || 1) === 1);
+   const always = tab1Items.filter(x=>x.star).sort((a,b)=>a.id-b.id);
+   const date = tab1Items.filter(x=>!x.star && x.day===selectedDay).sort((a,b)=>a.id-b.id);
+   
+   document.getElementById('alwaysCount').textContent=always.length?`${always.length}개`:'';
+   document.getElementById('dateCount').textContent=date.length?`${date.length}개`:'';
+   document.getElementById('dateTitle').textContent=`${selectedDay}일 물품`;
+   
+   document.getElementById('alwaysList').innerHTML=always.length ? always.map(card).join('') + '<button type="button" class="list-add-btn" onclick="openModal(null, true)">+</button>' : '<div class="empty" onclick="openModal(null, true)">등록된 즐겨찾기가 없습니다.</div>';
+   document.getElementById('dateList').innerHTML=date.length ? date.map(card).join('') + '<button type="button" class="list-add-btn" onclick="openModal()">+</button>' : '<div class="empty" onclick="openModal()">이 날짜에 저장된 물품이 없습니다.</div>';
+ } else {
+   const tab2Items = items.filter(x => x.tab === 2).sort((a,b)=>b.id-a.id);
+   
+   document.getElementById('dateTitle').textContent='단가 목록';
+   document.getElementById('dateCount').textContent=tab2Items.length?`${tab2Items.length}개`:'';
+   document.getElementById('dateList').innerHTML=tab2Items.length ? tab2Items.map(card).join('') + '<button type="button" class="list-add-btn" onclick="openModal()">+</button>' : '<div class="empty" onclick="openModal()">저장된 단가 물품이 없습니다.</div>';
+ }
+}
+
+/* 이미지 저장 함수 추가 */
+function saveListImage(){
+  const target = document.getElementById('captureArea');
+  const title = document.getElementById('dateTitle').textContent.trim() || '물품목록';
+  
+  html2canvas(target, {
+    backgroundColor: "#f5f6fa",
+    scale: 2,
+    ignoreElements: (el) => el.classList.contains('list-add-btn') || el.classList.contains('save-img-btn') || el.classList.contains('del-btn')
+  }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `${title}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+}
+
+initHeader();
+cleanupOldData();
+renderDays();
+switchTab(1);
+initKeyEvents();
+
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('Service Worker registered with scope:', reg.scope))
+      .catch(err => console.error('Service Worker registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
