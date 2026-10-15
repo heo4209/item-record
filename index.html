@@ -442,11 +442,24 @@ renderDays();
 switchTab(1);
 initKeyEvents();
 
-// Register Service Worker for PWA
+// PWA: check the deployed version when opening or returning to the app.
+// Data lives in localStorage and is not cleared during an update.
 if ('serviceWorker' in navigator) {
+  let reloadingForUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloadingForUpdate) return;
+    reloadingForUpdate = true;
+    window.location.reload();
+  });
+
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Service Worker registered with scope:', reg.scope))
+    navigator.serviceWorker.register('./sw.js', {updateViaCache: 'none'})
+      .then(reg => {
+        reg.update().catch(() => {});
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden && navigator.onLine) reg.update().catch(() => {});
+        });
+      })
       .catch(err => console.error('Service Worker registration failed:', err));
   });
 }
