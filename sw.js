@@ -1,11 +1,10 @@
-const CACHE_NAME = 'item-record-v1';
+const CACHE_NAME = 'my-cart-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png',
-  'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+  './icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {

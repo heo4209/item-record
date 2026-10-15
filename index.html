@@ -4,16 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#f7f8fc">
-<title>물품 기록</title>
+<title>마이 카트</title>
 <!-- PWA Settings -->
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="물품 기록">
+<meta name="apple-mobile-web-app-title" content="마이 카트">
 <link rel="apple-touch-icon" href="icon-192.png">
 
-<!-- 이미지 저장 라이브러리 추가 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f5f6fa;color:#20232a;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}
@@ -80,15 +78,15 @@ input[type=number]{-moz-appearance:textfield}
 .history-table .col-name{width:42%;word-break:break-all}
 .history-table .col-amount{width:30%;text-align:right;font-weight:600}
 
-/* 사진 저장 버튼 스타일 추가 */
-.save-img-btn{border:0;background:#22252d;color:#fff;border-radius:10px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;transition:background .2s}
-.save-img-btn:active{background:#444}
+/* 선택한 날짜의 물품 합계 표시 */
+.day-section-title{gap:8px;flex-wrap:wrap}
+.daily-total{margin-left:auto;white-space:nowrap;background:#fff;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:750;color:#22252d;box-shadow:0 2px 8px #00000009}
 </style>
 </head>
 <body>
 <div class="app">
 <header>
-  <h1>물품 기록</h1>
+  <h1>마이 카트</h1>
   <div class="header-right">
     <button type="button" class="history-btn" onclick="openHistoryModal()">전체내역</button>
     <div class="today" id="today"></div>
@@ -103,15 +101,14 @@ input[type=number]{-moz-appearance:textfield}
 <div class="days" id="days"></div>
 
 <div class="section">
-  <!-- 00일 물품 캡처 영역 지정 -->
+  <!-- 날짜별 물품 목록 -->
   <div id="captureArea" style="padding:2px; background:#f5f6fa; border-radius:18px;">
-    <div class="section-title">
+    <div class="section-title day-section-title">
       <div style="display:flex;align-items:center;gap:6px">
         <h2 id="dateTitle">오늘 물품</h2>
         <span class="count" id="dateCount"></span>
       </div>
-      <!-- 사진 저장 버튼 위치 추가 -->
-      <button type="button" class="save-img-btn" onclick="saveListImage()">사진 저장</button>
+      <span id="dayTotal" class="daily-total" aria-live="polite">합계 0원</span>
     </div>
     <div id="dateList"></div>
   </div>
@@ -423,6 +420,9 @@ function renderLists(){
    document.getElementById('alwaysCount').textContent=always.length?`${always.length}개`:'';
    document.getElementById('dateCount').textContent=date.length?`${date.length}개`:'';
    document.getElementById('dateTitle').textContent=`${selectedDay}일 물품`;
+   const total = date.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+   document.getElementById('dayTotal').textContent=`합계 ${new Intl.NumberFormat('ko-KR').format(total)}원`;
+   document.getElementById('dayTotal').style.display='inline-block';
    
    document.getElementById('alwaysList').innerHTML=always.length ? always.map(card).join('') + '<button type="button" class="list-add-btn" onclick="openModal(null, true)">+</button>' : '<div class="empty" onclick="openModal(null, true)">등록된 즐겨찾기가 없습니다.</div>';
    document.getElementById('dateList').innerHTML=date.length ? date.map(card).join('') + '<button type="button" class="list-add-btn" onclick="openModal()">+</button>' : '<div class="empty" onclick="openModal()">이 날짜에 저장된 물품이 없습니다.</div>';
@@ -430,26 +430,10 @@ function renderLists(){
    const tab2Items = items.filter(x => x.tab === 2).sort((a,b)=>b.id-a.id);
    
    document.getElementById('dateTitle').textContent='단가 목록';
+   document.getElementById('dayTotal').style.display='none';
    document.getElementById('dateCount').textContent=tab2Items.length?`${tab2Items.length}개`:'';
    document.getElementById('dateList').innerHTML=tab2Items.length ? tab2Items.map(card).join('') + '<button type="button" class="list-add-btn" onclick="openModal()">+</button>' : '<div class="empty" onclick="openModal()">저장된 단가 물품이 없습니다.</div>';
  }
-}
-
-/* 이미지 저장 함수 추가 */
-function saveListImage(){
-  const target = document.getElementById('captureArea');
-  const title = document.getElementById('dateTitle').textContent.trim() || '물품목록';
-  
-  html2canvas(target, {
-    backgroundColor: "#f5f6fa",
-    scale: 2,
-    ignoreElements: (el) => el.classList.contains('list-add-btn') || el.classList.contains('save-img-btn') || el.classList.contains('del-btn')
-  }).then(canvas => {
-    const link = document.createElement('a');
-    link.download = `${title}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  });
 }
 
 initHeader();

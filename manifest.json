@@ -1,6 +1,6 @@
 {
-  "name": "물품 기록",
-  "short_name": "물품 기록",
+  "name": "마이 카트",
+  "short_name": "마이 카트",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f5f6fa",
