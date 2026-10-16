@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#f7f8fc">
 <title>마이 카트</title>
+<!-- My Cart build: total-heading-v6-20261016 -->
 <!-- PWA Settings -->
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -80,7 +81,7 @@ input[type=number]{-moz-appearance:textfield}
 
 /* 선택한 날짜의 물품 합계 표시 */
 .day-section-title{gap:8px;flex-wrap:wrap}
-.daily-total{margin-left:auto;white-space:nowrap;font-size:16px;font-weight:700;color:#20232a}
+.daily-total{margin-left:auto;white-space:nowrap;text-align:right;color:inherit}
 </style>
 </head>
 <body>
@@ -108,7 +109,7 @@ input[type=number]{-moz-appearance:textfield}
         <h2 id="dateTitle">오늘 물품</h2>
         <span class="count" id="dateCount"></span>
       </div>
-      <span id="dayTotal" class="daily-total" aria-live="polite">0원</span>
+      <h2 id="dayTotal" class="daily-total" aria-live="polite">0원</h2>
     </div>
     <div id="dateList"></div>
   </div>

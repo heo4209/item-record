@@ -1,5 +1,5 @@
 /* My Cart PWA: online-first, offline-capable. Does not touch localStorage. */
-const CACHE_NAME = 'my-cart-pages-v5-total-text-20261016';
+const CACHE_NAME = 'my-cart-pages-v6-matched-heading-20261016';
 const CACHE_PREFIX = 'my-cart-';
 const APP_SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 const OFFLINE_PAGE = new URL('./index.html', self.registration.scope).href;
