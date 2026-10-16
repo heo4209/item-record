@@ -159,31 +159,49 @@ input[type=number]{-moz-appearance:textfield}
 <script>
 const KEY='item-record-v1';
 let items=JSON.parse(localStorage.getItem(KEY)||'[]');
-let selectedDay=new Date().getDate();
+let selectedDateKey=toDateKey(new Date());
 let currentTab=1;
 let editingId=null;
 
 const save=()=>localStorage.setItem(KEY,JSON.stringify(items));
 const DOW=['일','월','화','수','목','금','토'];
 
+// 날짜는 월말과 연말에도 구분되도록 YYYY-MM-DD로 비교합니다.
+function toDateKey(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function getValidDates(){
   const now=new Date(), list=[];
-  for(let i=-1; i<=15; i++) list.push(new Date(now.getFullYear(), now.getMonth(), now.getDate()+i));
+  // 오늘 포함 과거 7일 + 기존과 동일하게 미래 15일을 선택할 수 있습니다.
+  for(let i=-6; i<=15; i++) list.push(new Date(now.getFullYear(), now.getMonth(), now.getDate()+i));
   return list;
 }
 
-function cleanupOldData(){
- const yesterdayZero=new Date();
- yesterdayZero.setDate(yesterdayZero.getDate() - 1);
- yesterdayZero.setHours(0,0,0,0);
- const validDays=getValidDates().map(d=>d.getDate());
+// 기존 물품 데이터(year, month, day)를 수정하거나 초기화하지 않습니다.
+function itemDateKey(x){
+  if(x.year && x.month && x.day){
+    return `${x.year}-${String(x.month).padStart(2,'0')}-${String(x.day).padStart(2,'0')}`;
+  }
+  // 초기 버전에 연/월이 빠져 있던 항목도 선택 기간 안에서는 표시합니다.
+  const match=getValidDates().find(d=>d.getDate()===Number(x.day));
+  return match ? toDateKey(match) : null;
+}
 
- items=items.filter(x=>{
-   if(x.tab === 2 || x.star) return true;
-   if(x.year && x.month) return new Date(x.year, x.month-1, x.day) >= yesterdayZero;
-   return validDays.includes(x.day);
- });
- save();
+function cleanupOldData(){
+  const oldest=new Date();
+  oldest.setHours(0,0,0,0);
+  oldest.setDate(oldest.getDate()-6);
+  const oldestKey=toDateKey(oldest);
+  const validDates=new Set(getValidDates().map(toDateKey));
+
+  items=items.filter(x=>{
+    // 단가 목록과 즐겨찾기는 기존과 마찬가지로 계속 유지합니다.
+    if(x.tab===2 || x.star) return true;
+    if(x.year && x.month && x.day) return itemDateKey(x)>=oldestKey;
+    return validDates.has(itemDateKey(x));
+  });
+  save();
 }
 
 function initHeader(){
@@ -203,39 +221,46 @@ function switchTab(tabNum){
 }
 
 function renderDays(){
- const el=document.getElementById('days'); el.innerHTML='';
- getValidDates().forEach(d=>{
-   const day=d.getDate();
-   const b=document.createElement('button');
-   b.type='button';
-   b.className='day'+(day===selectedDay?' active':'');
-   b.innerHTML=`<div class="dow">${DOW[d.getDay()]}</div><div class="num">${day}</div>`;
-   b.onclick=()=>{selectedDay=day;renderDays();renderLists();};
-   el.appendChild(b);
- });
+  const el=document.getElementById('days'); el.innerHTML='';
+  let selectedButton=null;
+  getValidDates().forEach(d=>{
+    const key=toDateKey(d), day=d.getDate();
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='day'+(key===selectedDateKey?' active':'');
+    b.innerHTML=`<div class="dow">${DOW[d.getDay()]}</div><div class="num">${day}</div>`;
+    b.title=`${d.getFullYear()}년 ${d.getMonth()+1}월 ${day}일`;
+    b.setAttribute('aria-label',b.title);
+    b.onclick=()=>{selectedDateKey=key;renderDays();renderLists();};
+    el.appendChild(b);
+    if(key===selectedDateKey) selectedButton=b;
+  });
+  // 지난 날짜가 늘어나도 앱을 열면 '오늘'이 화면에 보이도록 합니다.
+  if(selectedButton){
+    el.scrollLeft=Math.max(0, selectedButton.offsetLeft-el.offsetLeft-(el.clientWidth-selectedButton.offsetWidth)/2);
+  }
 }
 
-function renderModalDateChips(targetDay){
- const container = document.getElementById('dateChips');
- container.innerHTML = '';
- const validDates = getValidDates();
- const now = new Date();
- 
- validDates.forEach(d => {
-   const day = d.getDate();
-   const isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-   const chip = document.createElement('button');
-   chip.type = 'button';
-   chip.className = 'chip' + (day === targetDay ? ' active' : '');
-   chip.textContent = isToday ? `오늘 (${day}일)` : `${day}일(${DOW[d.getDay()]})`;
-   chip.onclick = () => {
-     container.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-     chip.classList.add('active');
-     document.getElementById('dayInput').value = day;
-   };
-   container.appendChild(chip);
- });
- document.getElementById('dayInput').value = targetDay || '';
+function renderModalDateChips(targetDateKey){
+  const container=document.getElementById('dateChips');
+  container.innerHTML='';
+  const validDates=getValidDates();
+  const todayKey=toDateKey(new Date());
+
+  validDates.forEach(d=>{
+    const key=toDateKey(d), day=d.getDate();
+    const chip=document.createElement('button');
+    chip.type='button';
+    chip.className='chip'+(key===targetDateKey?' active':'');
+    chip.textContent=key===todayKey ? `오늘 (${day}일)` : `${d.getMonth()+1}/${day}(${DOW[d.getDay()]})`;
+    chip.onclick=()=>{
+      container.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+      document.getElementById('dayInput').value=key;
+    };
+    container.appendChild(chip);
+  });
+  document.getElementById('dayInput').value=targetDateKey||selectedDateKey;
 }
 
 function toggleDateSection(){
@@ -248,7 +273,7 @@ function openModal(item = null, isAlways = false){
  document.getElementById('saveBtn').textContent = item ? '수정 완료' : '저장';
  document.getElementById('modal').classList.add('show');
  
- renderModalDateChips(item?.day ?? selectedDay);
+ renderModalDateChips(item ? (itemDateKey(item) || selectedDateKey) : selectedDateKey);
 
  if(item){
    document.getElementById('nameInput').value = item.name;
@@ -315,7 +340,9 @@ function saveItem(){
  if(document.activeElement) document.activeElement.blur();
  const validDateObjs=getValidDates();
  const isStar=document.getElementById('starInput').checked;
- const day=parseInt(document.getElementById('dayInput').value, 10);
+   const requestedDateKey=document.getElementById('dayInput').value;
+  const matchedDate=validDateObjs.find(d=>toDateKey(d)===requestedDateKey);
+  const day=matchedDate ? matchedDate.getDate() : null;
  const name=document.getElementById('nameInput').value.trim();
  const unitPriceRaw=document.getElementById('unitPriceInput').value.trim();
  const qtyRaw=document.getElementById('qtyInput').value.trim();
@@ -326,9 +353,8 @@ function saveItem(){
  if(!name){alert('이름을 입력해주세요.');return}
  if(amountRaw==='' || amount<0){alert('금액을 입력해주세요.');return}
  if(qty<=0){alert('수량은 0보다 크게 입력해주세요.');return}
- if(!isStar && (!day || !validDateObjs.some(d=>d.getDate()===day))){alert('날짜를 선택해주세요.');return}
+   if(!isStar && !matchedDate){alert('날짜를 선택해주세요.');return}
 
- const matchedDate=validDateObjs.find(d=>d.getDate()===day) || validDateObjs[0];
  const itemData = {
    year: isStar ? null : matchedDate.getFullYear(),
    month: isStar ? null : matchedDate.getMonth()+1,
@@ -348,7 +374,7 @@ function saveItem(){
  }
 
  save(); 
- if(!isStar && day) selectedDay=day; 
+ if(!isStar && matchedDate) selectedDateKey=toDateKey(matchedDate); 
  closeModal();
  renderDays(); renderLists();
 }
@@ -415,11 +441,12 @@ function renderLists(){
  if(currentTab === 1){
    const tab1Items = items.filter(x => (x.tab || 1) === 1);
    const always = tab1Items.filter(x=>x.star).sort((a,b)=>a.id-b.id);
-   const date = tab1Items.filter(x=>!x.star && x.day===selectedDay).sort((a,b)=>a.id-b.id);
+   const date = tab1Items.filter(x=>!x.star && itemDateKey(x)===selectedDateKey).sort((a,b)=>a.id-b.id);
    
    document.getElementById('alwaysCount').textContent=always.length?`${always.length}개`:'';
    document.getElementById('dateCount').textContent=date.length?`${date.length}개`:'';
-   document.getElementById('dateTitle').textContent=`${selectedDay}일 물품`;
+   const chosenDate=getValidDates().find(d=>toDateKey(d)===selectedDateKey) || new Date();
+   document.getElementById('dateTitle').textContent=`${chosenDate.getMonth()+1}월 ${chosenDate.getDate()}일 물품`;
    const total = date.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
    document.getElementById('dayTotal').textContent=`합계 ${new Intl.NumberFormat('ko-KR').format(total)}원`;
    document.getElementById('dayTotal').style.display='inline-block';
