@@ -80,7 +80,7 @@ input[type=number]{-moz-appearance:textfield}
 
 /* 선택한 날짜의 물품 합계 표시 */
 .day-section-title{gap:8px;flex-wrap:wrap}
-.daily-total{margin-left:auto;white-space:nowrap;background:#fff;border-radius:10px;padding:6px 10px;font-size:13px;font-weight:750;color:#22252d;box-shadow:0 2px 8px #00000009}
+.daily-total{margin-left:auto;white-space:nowrap;font-size:16px;font-weight:700;color:#20232a}
 </style>
 </head>
 <body>
@@ -108,7 +108,7 @@ input[type=number]{-moz-appearance:textfield}
         <h2 id="dateTitle">오늘 물품</h2>
         <span class="count" id="dateCount"></span>
       </div>
-      <span id="dayTotal" class="daily-total" aria-live="polite">합계 0원</span>
+      <span id="dayTotal" class="daily-total" aria-live="polite">0원</span>
     </div>
     <div id="dateList"></div>
   </div>
@@ -448,7 +448,7 @@ function renderLists(){
    const chosenDate=getValidDates().find(d=>toDateKey(d)===selectedDateKey) || new Date();
    document.getElementById('dateTitle').textContent=`${chosenDate.getMonth()+1}월 ${chosenDate.getDate()}일 물품`;
    const total = date.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
-   document.getElementById('dayTotal').textContent=`합계 ${new Intl.NumberFormat('ko-KR').format(total)}원`;
+   document.getElementById('dayTotal').textContent=`${new Intl.NumberFormat('ko-KR').format(total)}원`;
    document.getElementById('dayTotal').style.display='inline-block';
    
    document.getElementById('alwaysList').innerHTML=always.length ? always.map(card).join('') + '<button type="button" class="list-add-btn" onclick="openModal(null, true)">+</button>' : '<div class="empty" onclick="openModal(null, true)">등록된 즐겨찾기가 없습니다.</div>';
